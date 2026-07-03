@@ -1,0 +1,32 @@
+{
+  "name": "@auction-radar/dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "로컬 읽기 전용 대시보드 (단일 HTML · 127.0.0.1 전용) — SPEC-UI-001",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b tsconfig.build.json && node scripts/build-html.mjs",
+    "dashboard": "node dist/server.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@auction-radar/alert": "workspace:*",
+    "@auction-radar/core": "workspace:*",
+    "@auction-radar/enrich": "workspace:*",
+    "@auction-radar/store": "workspace:*"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.0",
+    "esbuild": "^0.28.1",
+    "happy-dom": "^20.10.6",
+    "vitest": "^4.0.0"
+  }
+}

@@ -21,7 +21,7 @@ export {
 export type { TelegramConfig, FetchLike, FetchResponse } from './notifier/TelegramNotifier.js';
 
 // renderer
-export { renderMessage, formatKRW, DISCLAIMER } from './render/renderer.js';
+export { renderMessage, formatKRW, DISCLAIMER, enrichEmphasized } from './render/renderer.js';
 export type { RenderInput, RenderEventType, EnrichInfo } from './render/renderer.js';
 
 // matcher
@@ -57,6 +57,7 @@ export {
   kstParts,
   todayKST,
   addDaysKST,
+  daysUntilKST,
   isWithinQuietHours,
   nextWindowEndISO,
 } from './time/kst.js';

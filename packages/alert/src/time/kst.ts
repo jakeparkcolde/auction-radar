@@ -77,6 +77,25 @@ export function addDaysKST(dateStr: string, days: number): string {
   return `${base.getUTCFullYear()}-${pad2(base.getUTCMonth() + 1)}-${pad2(base.getUTCDate())}`;
 }
 
+/**
+ * 기준 시각(now)의 KST 오늘 날짜로부터 대상 날짜(YYYY-MM-DD)까지 남은 일수를 반환한다. (결정 D2)
+ *
+ * D-day 계산의 단일 소스. 양수면 미래(예: 3 → "D-3"), 0 이면 당일, 음수면 과거.
+ * 순수 달력 산술(자정 기준 일수 차)로 계산해 시·분·타임존 영향이 없다.
+ * 대시보드와 알림(텔레그램)이 동일 유틸을 재사용해 표기 불일치를 방지한다.
+ *
+ * @param dateStr 대상 날짜 YYYY-MM-DD.
+ * @param now 기준 시각(Date 또는 epoch ms).
+ */
+export function daysUntilKST(dateStr: string, now: Date | number): number {
+  const today = todayKST(now);
+  const [ty, tm, td] = today.split('-').map(Number) as [number, number, number];
+  const [y, m, d] = dateStr.split('-').map(Number) as [number, number, number];
+  const base = Date.UTC(ty, tm - 1, td);
+  const target = Date.UTC(y, m - 1, d);
+  return Math.round((target - base) / 86_400_000);
+}
+
 /** "HH:MM" 을 자정 기준 분(minute-of-day)으로 변환한다. */
 function toMinutes(hhmm: string): number {
   const [h, m] = hhmm.split(':').map(Number) as [number, number];

@@ -1,0 +1,226 @@
+/*
+ * 대시보드 스타일. (SPEC-UI-001 REQ-003, AC-05)
+ * 외부 요청 0건 원칙: 시스템 폰트 스택만 사용(@import·url(http)·웹폰트 금지).
+ */
+
+:root {
+  --bg: #0f1115;
+  --panel: #171a21;
+  --panel-2: #1e222b;
+  --text: #e6e8ec;
+  --muted: #9aa2ad;
+  --accent: #4da3ff;
+  --warn-bg: #3a2417;
+  --warn-fg: #ffb37a;
+  --line: #2a2f3a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+#app {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.app-header h1 {
+  font-size: 18px;
+  margin: 0 0 4px;
+}
+
+.disclaimer {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.banner-warn {
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+  border: 1px solid var(--warn-fg);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 12px 0;
+}
+
+.filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+
+.filter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.filter select {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+section {
+  margin: 20px 0;
+}
+
+section h2 {
+  font-size: 14px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 6px;
+}
+
+.item-list {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.item {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.imminent .item {
+  border-color: var(--accent);
+}
+
+.item-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.item-head .case {
+  font-weight: 600;
+}
+
+.item-head .court {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.item-head .dday {
+  margin-left: auto;
+  background: var(--panel-2);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.loc {
+  color: var(--muted);
+  margin: 6px 0;
+}
+
+.prices {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.prices .minsale {
+  font-weight: 600;
+}
+
+.prices .failed {
+  color: var(--warn-fg);
+}
+
+.saledate {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.enrich {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+/* 강조 규칙(결정 D5): emphasize=true 인 할인율만 굵게. 낮음/참고치는 .emph 미부여. */
+.enrich .discount {
+  font-weight: 400;
+}
+
+.enrich .discount.emph {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.court-link {
+  display: inline-block;
+  margin-top: 8px;
+  color: var(--accent);
+  font-size: 12px;
+}
+
+.event-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.event {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.badge {
+  background: var(--panel-2);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+.ev-region {
+  color: var(--muted);
+}
+
+.ev-time {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.empty-state {
+  background: var(--panel);
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 32px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.app-footer {
+  margin-top: 32px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  text-align: center;
+}

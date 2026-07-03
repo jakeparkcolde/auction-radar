@@ -127,16 +127,28 @@ function priceLine(input: RenderInput): string | null {
 }
 
 /**
+ * enrich 할인율 강조(굵게) 허용 여부. (REQ-008, 결정 D4/D5)
+ *
+ * 강조 규칙의 단일 소스 — 텔레그램 렌더러와 대시보드가 공유한다.
+ * emphasize 미지정(하위 호환) 또는 true 면 강조 허용, false(낮음/참고치)면 억제.
+ *
+ * @param enrich emphasize 필드를 가진 enrich 슬롯.
+ */
+export function enrichEmphasized(enrich: Pick<EnrichInfo, 'emphasize'>): boolean {
+  return enrich.emphasize !== false;
+}
+
+/**
  * enrich 할인율 라인(부재 시 null).
  *
- * 강조(굵게)는 emphasize !== false 일 때만 적용한다. (REQ-008, 결정 D4)
+ * 강조(굵게)는 enrichEmphasized 규칙을 따른다. (REQ-008, 결정 D4/D5)
  * emphasize 미지정(하위 호환)이면 강조 유지, false(낮음/참고치)면 강조 억제.
  */
 function enrichLine(enrich: EnrichInfo | null | undefined): string | null {
   if (!enrich) return null;
   const pct = signedPercent(enrich.discountPct);
   const conf = htmlEscape(enrich.confidence);
-  const pctText = enrich.emphasize === false ? pct : `<b>${pct}</b>`;
+  const pctText = enrichEmphasized(enrich) ? `<b>${pct}</b>` : pct;
   return `📊 인근 실거래 중위값 대비 ${pctText} (표본 ${enrich.sampleSize}건 · 신뢰도 ${conf})`;
 }
 

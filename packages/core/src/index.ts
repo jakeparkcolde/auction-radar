@@ -15,6 +15,9 @@ export type {
 export { ENDPOINTS, ENDPOINTS_VERSION, DEFAULT_BASE_URL } from './endpoints.js';
 export type { EndpointKey, EndpointSpec } from './endpoints.js';
 
+// 법원 원문 링크 (SPEC-UI-001 결정 D4)
+export { courtAuctionUrl } from './court-link.js';
+
 // 정규화
 export { normalizeCaseNumber, regionNorm } from './normalize/index.js';
 
