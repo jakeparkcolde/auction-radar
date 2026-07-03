@@ -9,7 +9,9 @@
   "engines": {
     "node": ">=20.11"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -b tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
@@ -19,6 +21,7 @@
   "dependencies": {
     "@auction-radar/alert": "workspace:*",
     "@auction-radar/core": "workspace:*",
+    "@auction-radar/enrich": "workspace:*",
     "@auction-radar/store": "workspace:*",
     "@inquirer/prompts": "8.5.2",
     "commander": "15.0.0",

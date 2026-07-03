@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "실거래가 결합·중위값·신뢰도 등급 (v1.x, 현재는 빈 스텁)",
+  "description": "실거래가 결합·중위값 할인율·신뢰도 등급 (SPEC-ENRICH-001)",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -12,9 +12,22 @@
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -b tsconfig.build.json",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@auction-radar/core": "workspace:*",
+    "@auction-radar/store": "workspace:*",
+    "fast-xml-parser": "^4.5.6"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.0",
+    "vitest": "^4.0.0"
   }
 }

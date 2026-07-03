@@ -20,6 +20,13 @@ import {
   selectUndelivered,
 } from '@auction-radar/alert';
 import type { Notifier } from '@auction-radar/alert';
+import {
+  enrichUndelivered,
+  loadEnrichTargets,
+  resolveEnrichConfig,
+  toEnrichInfo,
+} from '@auction-radar/enrich';
+import type { EnrichResult, MolitFetchLike } from '@auction-radar/enrich';
 import type { Config } from '../config/schema.js';
 import { withDisclaimer } from '../disclaimer.js';
 import { maskSecrets } from '../util/mask.js';
@@ -79,6 +86,41 @@ function maskingLogger(out: Output, secrets: ReadonlyArray<string | undefined>):
 function matchSummary(courtName: string, caseNumber: string, region: string | null | undefined): string {
   const loc = region ? ` · ${region}` : '';
   return `- ${courtName} ${caseNumber}${loc}`;
+}
+
+/**
+ * 미발송 이벤트에 대한 enrich 결과 맵을 계산한다. (SPEC-ENRICH-001 REQ-003/011, AC-08)
+ *
+ * enrich 는 알림 파이프라인의 부가 정보이므로, 어떤 실패도 여기서 흡수해
+ * 빈 맵을 반환한다(할인율 라인만 생략, 알림은 정상 발송·sync 성공 유지).
+ */
+async function computeEnrichMap(
+  store: Store,
+  config: Config,
+  eventIds: readonly number[],
+  now: () => string,
+  logger: Logger,
+): Promise<Map<number, EnrichResult | null>> {
+  if (eventIds.length === 0) return new Map();
+  try {
+    const enrichConfig = resolveEnrichConfig({
+      enabled: config.enrich.enabled,
+      ...(config.enrich.molitKey !== undefined ? { molitKey: config.enrich.molitKey } : {}),
+      ...(config.enrich.baseUrl !== undefined ? { baseUrl: config.enrich.baseUrl } : {}),
+    });
+    const targets = loadEnrichTargets(store, eventIds);
+    // enabled + molitKey 일 때만 실제 호출된다(기본 비활성 → 네트워크 없음).
+    const fetchFn: MolitFetchLike = (url) =>
+      globalThis.fetch(url) as unknown as ReturnType<MolitFetchLike>;
+    return await enrichUndelivered(store, enrichConfig, targets, {
+      now: () => new Date(now()),
+      logger,
+      fetchFn,
+    });
+  } catch (err) {
+    logger.warn(`enrich 결합 실패 — 할인율 라인 없이 발송 지속: ${String(err)}`);
+    return new Map();
+  }
 }
 
 /**
@@ -142,6 +184,15 @@ export async function runSyncCommand(ctx: SyncCtx): Promise<SyncCommandResult> {
   matchEvents(store);
   const undelivered = selectUndelivered(store, ctx.now());
 
+  // enrich 결합(할인율·신뢰도) — 실패는 흡수해 알림 파이프라인을 무중단 유지. (REQ-003/011)
+  const enrichMap = await computeEnrichMap(
+    store,
+    config,
+    undelivered.map((u) => u.eventId),
+    ctx.now,
+    logger,
+  );
+
   let sent = 0;
   let held = 0;
   let failed = 0;
@@ -160,7 +211,12 @@ export async function runSyncCommand(ctx: SyncCtx): Promise<SyncCommandResult> {
         held += 1;
         continue;
       }
-      const text = renderMessage(u.render);
+      // enrich 결과가 있으면 렌더 입력에 병합(없으면 기존과 동일한 렌더). (REQ-011)
+      const enrichResult = enrichMap.get(u.eventId) ?? null;
+      const renderInput = enrichResult
+        ? { ...u.render, enrich: toEnrichInfo(enrichResult) }
+        : u.render;
+      const text = renderMessage(renderInput);
       const res = await ctx.notifier.send({ text });
       if (res.ok) {
         recordSent(store, u.eventId, ctx.now());

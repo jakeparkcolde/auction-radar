@@ -51,6 +51,39 @@ describe('renderMessage (REQ-010/011/017)', () => {
     expect(msg).toContain('📊 인근 실거래 중위값 대비 <b>−32%</b> (표본 14건 · 신뢰도 높음)');
   });
 
+  it('SPEC-ENRICH-001 D4: emphasize=true(또는 미지정) 는 할인율을 굵게 표시한다', () => {
+    const msg = renderMessage({
+      ...priceDrop,
+      enrich: { discountPct: -32, sampleSize: 14, confidence: '높음', emphasize: true },
+    });
+    expect(msg).toContain('중위값 대비 <b>−32%</b>');
+  });
+
+  it('AC-06: 표본 부족(낮음, emphasize=false)은 할인율을 굵게(<b>) 표시하지 않고 "참고치 (표본 부족)" 를 병기한다', () => {
+    const msg = renderMessage({
+      ...priceDrop,
+      enrich: {
+        discountPct: -12,
+        sampleSize: 2,
+        confidence: '참고치 (표본 부족)',
+        emphasize: false,
+      },
+    });
+    // 할인율이 굵게 표시되지 않음.
+    expect(msg).toContain('📊 인근 실거래 중위값 대비 −12% (표본 2건 · 신뢰도 참고치 (표본 부족))');
+    expect(msg).not.toContain('<b>−12%</b>');
+    expect(msg).toContain('참고치 (표본 부족)');
+  });
+
+  it('AC-07: 빌라·토지 참고치(emphasize=false) 도 강조 억제', () => {
+    const msg = renderMessage({
+      ...priceDrop,
+      enrich: { discountPct: -8, sampleSize: 20, confidence: '참고치', emphasize: false },
+    });
+    expect(msg).not.toContain('<b>−8%</b>');
+    expect(msg).toContain('신뢰도 참고치)');
+  });
+
   it('AC-10: 스크랩 유래 문자열은 이스케이프되어 삽입된다', () => {
     const msg = renderMessage({
       ...priceDrop,

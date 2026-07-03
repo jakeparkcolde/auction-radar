@@ -20,8 +20,15 @@ export interface EnrichInfo {
   readonly discountPct: number;
   /** 표본 수. */
   readonly sampleSize: number;
-  /** 신뢰도 등급 라벨(예: "높음"). */
+  /** 신뢰도 등급 라벨(예: "높음", "참고치 (표본 부족)"). */
   readonly confidence: string;
+  /**
+   * 할인율 강조(굵게) 허용 여부. (SPEC-ENRICH-001 REQ-008, 결정 D4)
+   *
+   * 미지정(undefined) 또는 true 면 강조(하위 호환 — 기존 소비자는 이 필드를 생략).
+   * 낮음/참고치(표본 부족)에서 enrich 가 false 를 넘기면 강조를 억제한다.
+   */
+  readonly emphasize?: boolean;
 }
 
 /** 렌더링 입력(매처/커서가 DB row 로부터 구성). */
@@ -119,12 +126,18 @@ function priceLine(input: RenderInput): string | null {
   return null;
 }
 
-/** enrich 할인율 라인(부재 시 null). */
+/**
+ * enrich 할인율 라인(부재 시 null).
+ *
+ * 강조(굵게)는 emphasize !== false 일 때만 적용한다. (REQ-008, 결정 D4)
+ * emphasize 미지정(하위 호환)이면 강조 유지, false(낮음/참고치)면 강조 억제.
+ */
 function enrichLine(enrich: EnrichInfo | null | undefined): string | null {
   if (!enrich) return null;
   const pct = signedPercent(enrich.discountPct);
   const conf = htmlEscape(enrich.confidence);
-  return `📊 인근 실거래 중위값 대비 <b>${pct}</b> (표본 ${enrich.sampleSize}건 · 신뢰도 ${conf})`;
+  const pctText = enrich.emphasize === false ? pct : `<b>${pct}</b>`;
+  return `📊 인근 실거래 중위값 대비 ${pctText} (표본 ${enrich.sampleSize}건 · 신뢰도 ${conf})`;
 }
 
 /** 매각기일 라인(기일/ D-day 존재 시). */

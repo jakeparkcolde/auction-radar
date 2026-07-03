@@ -5,6 +5,7 @@ import { defineConfig } from 'vitest/config';
 const storeSrc = fileURLToPath(new URL('../../packages/store/src/index.ts', import.meta.url));
 const coreSrc = fileURLToPath(new URL('../../packages/core/src/index.ts', import.meta.url));
 const alertSrc = fileURLToPath(new URL('../../packages/alert/src/index.ts', import.meta.url));
+const enrichSrc = fileURLToPath(new URL('../../packages/enrich/src/index.ts', import.meta.url));
 
 export default defineConfig({
   resolve: {
@@ -12,6 +13,7 @@ export default defineConfig({
       '@auction-radar/store': storeSrc,
       '@auction-radar/core': coreSrc,
       '@auction-radar/alert': alertSrc,
+      '@auction-radar/enrich': enrichSrc,
     },
   },
   test: {

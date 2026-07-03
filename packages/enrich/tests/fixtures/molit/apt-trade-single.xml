@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<response>
+  <header><resultCode>000</resultCode><resultMsg>OK</resultMsg></header>
+  <body>
+    <items>
+      <item>
+        <aptNm>단일거래아파트</aptNm>
+        <dealAmount>37,600</dealAmount>
+        <excluUseAr>59.99</excluUseAr>
+        <floor>5</floor>
+        <dealYear>2026</dealYear>
+        <dealMonth>6</dealMonth>
+        <dealDay>12</dealDay>
+        <sggCd>28260</sggCd>
+      </item>
+    </items>
+    <numOfRows>100</numOfRows>
+    <pageNo>1</pageNo>
+    <totalCount>1</totalCount>
+  </body>
+</response>

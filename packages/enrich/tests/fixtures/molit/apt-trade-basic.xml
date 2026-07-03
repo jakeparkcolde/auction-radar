@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<response>
+  <header>
+    <resultCode>000</resultCode>
+    <resultMsg>OK</resultMsg>
+  </header>
+  <body>
+    <items>
+      <item>
+        <aptNm>청라한양수자인</aptNm>
+        <dealAmount>115,000</dealAmount>
+        <excluUseAr>84.99</excluUseAr>
+        <floor>15</floor>
+        <dealYear>2026</dealYear>
+        <dealMonth>6</dealMonth>
+        <dealDay>5</dealDay>
+        <umdNm>청라동</umdNm>
+        <sggCd>28260</sggCd>
+        <buildYear>2012</buildYear>
+      </item>
+      <item>
+        <aptNm>청라한양수자인</aptNm>
+        <dealAmount>98,500</dealAmount>
+        <excluUseAr>74.50</excluUseAr>
+        <floor>3</floor>
+        <dealYear>2026</dealYear>
+        <dealMonth>6</dealMonth>
+        <dealDay>18</dealDay>
+        <umdNm>청라동</umdNm>
+        <sggCd>28260</sggCd>
+        <buildYear>2012</buildYear>
+      </item>
+      <item>
+        <aptNm>금액없는단지</aptNm>
+        <dealAmount> </dealAmount>
+        <excluUseAr>59.90</excluUseAr>
+        <floor>7</floor>
+        <dealYear>2026</dealYear>
+        <dealMonth>6</dealMonth>
+        <dealDay>20</dealDay>
+        <umdNm>청라동</umdNm>
+        <sggCd>28260</sggCd>
+        <buildYear>2015</buildYear>
+      </item>
+    </items>
+    <numOfRows>100</numOfRows>
+    <pageNo>1</pageNo>
+    <totalCount>2</totalCount>
+  </body>
+</response>

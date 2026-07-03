@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<response>
+  <header><resultCode>000</resultCode><resultMsg>OK</resultMsg></header>
+  <body>
+    <items>
+      <item>
+        <aptNm>더샵청라</aptNm>
+        <dealAmount>120,000</dealAmount>
+        <excluUseAr>84.99</excluUseAr>
+        <floor>10</floor>
+        <dealYear>2026</dealYear>
+        <dealMonth>6</dealMonth>
+        <dealDay>1</dealDay>
+        <sggCd>28260</sggCd>
+      </item>
+    </items>
+    <numOfRows>1</numOfRows>
+    <pageNo>1</pageNo>
+    <totalCount>2</totalCount>
+  </body>
+</response>

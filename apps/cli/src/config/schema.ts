@@ -46,10 +46,12 @@ export const collectorSchema = z.object({
   schedule: z.array(z.string()).default(['08:00', '18:00']),
 });
 
-/** enrich(실거래 결합) 설정. */
+/** enrich(실거래 결합) 설정. (SPEC-ENRICH-001 REQ-001) */
 export const enrichSchema = z.object({
   molitKey: z.string().optional(),
   enabled: z.boolean().default(false),
+  /** MOLIT base URL(엔드포인트 개편 대응). 미지정 시 enrich 가 Dev 기본값을 사용. */
+  baseUrl: z.string().optional(),
 });
 
 /** 알림 설정. */

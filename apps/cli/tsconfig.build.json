@@ -8,7 +8,8 @@
   "references": [
     { "path": "../../packages/core/tsconfig.build.json" },
     { "path": "../../packages/store/tsconfig.build.json" },
-    { "path": "../../packages/alert/tsconfig.build.json" }
+    { "path": "../../packages/alert/tsconfig.build.json" },
+    { "path": "../../packages/enrich/tsconfig.build.json" }
   ],
   "include": ["src/**/*.ts"],
   "exclude": ["dist", "node_modules", "src/**/*.test.ts"]
