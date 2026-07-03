@@ -1,0 +1,19 @@
+{
+  "name": "@auction-radar/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "auction-radar CLI (init/sync/watch/case/export/doctor/schedule) — 현재는 빈 스텁",
+  "bin": {
+    "auction-radar": "./dist/index.js"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@auction-radar/core": "workspace:*",
+    "@auction-radar/store": "workspace:*"
+  }
+}

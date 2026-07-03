@@ -1,0 +1,20 @@
+{
+  "name": "@auction-radar/enrich",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "실거래가 결합·중위값·신뢰도 등급 (v1.x, 현재는 빈 스텁)",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "@auction-radar/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "엔드포인트 상수·수집·스로틀링·정규화·diff/이벤트·용도 매핑 (수집 파이프라인 코어)",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@auction-radar/store": "workspace:*",
+    "court-auction-notice-search": "0.3.0"
+  },
+  "optionalDependencies": {
+    "playwright-core": "^1.49.0"
+  }
+}

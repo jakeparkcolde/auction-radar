@@ -1,0 +1,9 @@
+packages:
+  - 'packages/*'
+  - 'apps/*'
+
+# better-sqlite3 는 네이티브 애드온 빌드를 위해 설치 스크립트 실행이 필요하다.
+allowBuilds:
+  better-sqlite3: true
+onlyBuiltDependencies:
+  - better-sqlite3

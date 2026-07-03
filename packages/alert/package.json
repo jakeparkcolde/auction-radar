@@ -1,0 +1,20 @@
+{
+  "name": "@auction-radar/alert",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "워치리스트 매칭 + 알림(telegram) + digest + quiet hours (현재는 빈 스텁)",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

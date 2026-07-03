@@ -1,0 +1,28 @@
+{
+  "_comment": "20건 중 2건(index 5, 12)이 필수 필드(caseNumber) 누락 (AC-06, REQ-016). 가공 데이터 — PII 없음.",
+  "court": "B000280",
+  "yearMonth": "202607",
+  "badIndices": [5, 12],
+  "records": [
+    { "court": "B000280", "caseNumber": "2025타경200001", "itemNo": 1, "usage": "아파트", "addressRaw": "인천광역시 서구 청라동", "appraisedPrice": 300000000, "minSalePrice": 300000000, "failedCount": 0, "status": "진행중", "nextSaleDate": "2026-07-10", "announcementId": "A-200001" },
+    { "court": "B000280", "caseNumber": "2025타경200002", "itemNo": 1, "usage": "오피스텔", "addressRaw": "인천광역시 서구 가정동", "appraisedPrice": 150000000, "minSalePrice": 150000000, "failedCount": 0, "status": "진행중", "nextSaleDate": "2026-07-11", "announcementId": "A-200002" },
+    { "court": "B000280", "caseNumber": "2025타경200003", "itemNo": 1, "usage": "근린생활시설", "addressRaw": "인천광역시 서구 신현동", "appraisedPrice": 500000000, "minSalePrice": 400000000, "failedCount": 1, "status": "유찰", "nextSaleDate": "2026-07-12", "announcementId": "A-200003" },
+    { "court": "B000280", "caseNumber": "2025타경200004", "itemNo": 1, "usage": "토지", "addressRaw": "인천광역시 서구 원창동", "appraisedPrice": 80000000, "minSalePrice": 80000000, "failedCount": 0, "status": "진행중", "nextSaleDate": "2026-07-13", "announcementId": "A-200004" },
+    { "court": "B000280", "caseNumber": "2025타경200005", "itemNo": 1, "usage": "연립주택", "addressRaw": "인천광역시 서구 마전동", "appraisedPrice": 220000000, "minSalePrice": 176000000, "failedCount": 1, "status": "유찰", "nextSaleDate": "2026-07-14", "announcementId": "A-200005" },
+    { "court": "B000280", "itemNo": 1, "usage": "아파트", "addressRaw": "인천광역시 서구 당하동", "appraisedPrice": 350000000, "minSalePrice": 350000000, "failedCount": 0, "status": "진행중", "nextSaleDate": "2026-07-15", "announcementId": "A-BAD-06" },
+    { "court": "B000280", "caseNumber": "2025타경200007", "itemNo": 1, "usage": "아파트", "addressRaw": "인천광역시 서구 불로동", "appraisedPrice": 280000000, "minSalePrice": 280000000, "failedCount": 0, "status": "진행중", "nextSaleDate": "2026-07-16", "announcementId": "A-200007" },
+    { "court": "B000280", "caseNumber": "2025타경200008", "itemNo": 1, "usage": "다세대주택", "addressRaw": "인천광역시 서구 검암동", "appraisedPrice": 190000000, "minSalePrice": 152000000, "failedCount": 1, "status": "유찰", "nextSaleDate": "2026-07-17", "announcementId": "A-200008" },
+    { "court": "B000280", "caseNumber": "2025타경200009", "itemNo": 1, "usage": "상가", "addressRaw": "인천광역시 서구 석남동", "appraisedPrice": 600000000, "minSalePrice": 600000000, "failedCount": 0, "status": "진행중", "nextSaleDate": "2026-07-18", "announcementId": "A-200009" },
+    { "court": "B000280", "caseNumber": "2025타경200010", "itemNo": 1, "usage": "아파트", "addressRaw": "인천광역시 서구 가좌동", "appraisedPrice": 410000000, "minSalePrice": 328000000, "failedCount": 1, "status": "유찰", "nextSaleDate": "2026-07-19", "announcementId": "A-200010" },
+    { "court": "B000280", "caseNumber": "2025타경200011", "itemNo": 1, "usage": "오피스텔", "addressRaw": "인천광역시 서구 심곡동", "appraisedPrice": 130000000, "minSalePrice": 130000000, "failedCount": 0, "status": "진행중", "nextSaleDate": "2026-07-20", "announcementId": "A-200011" },
+    { "court": "B000280", "caseNumber": "2025타경200012", "itemNo": 1, "usage": "토지", "addressRaw": "인천광역시 서구 공촌동", "appraisedPrice": 95000000, "minSalePrice": 95000000, "failedCount": 0, "status": "진행중", "nextSaleDate": "2026-07-21", "announcementId": "A-200012" },
+    { "court": "B000280", "itemNo": 1, "usage": "아파트", "addressRaw": "인천광역시 서구 연희동", "appraisedPrice": 370000000, "minSalePrice": 370000000, "failedCount": 0, "status": "진행중", "nextSaleDate": "2026-07-22", "announcementId": "A-BAD-13" },
+    { "court": "B000280", "caseNumber": "2025타경200014", "itemNo": 1, "usage": "아파트", "addressRaw": "인천광역시 서구 경서동", "appraisedPrice": 450000000, "minSalePrice": 360000000, "failedCount": 1, "status": "유찰", "nextSaleDate": "2026-07-23", "announcementId": "A-200014" },
+    { "court": "B000280", "caseNumber": "2025타경200015", "itemNo": 1, "usage": "근린생활시설", "addressRaw": "인천광역시 서구 백석동", "appraisedPrice": 520000000, "minSalePrice": 520000000, "failedCount": 0, "status": "진행중", "nextSaleDate": "2026-07-24", "announcementId": "A-200015" },
+    { "court": "B000280", "caseNumber": "2025타경200016", "itemNo": 1, "usage": "다가구주택", "addressRaw": "인천광역시 서구 시천동", "appraisedPrice": 240000000, "minSalePrice": 192000000, "failedCount": 1, "status": "유찰", "nextSaleDate": "2026-07-25", "announcementId": "A-200016" },
+    { "court": "B000280", "caseNumber": "2025타경200017", "itemNo": 1, "usage": "아파트", "addressRaw": "인천광역시 서구 대곡동", "appraisedPrice": 330000000, "minSalePrice": 330000000, "failedCount": 0, "status": "진행중", "nextSaleDate": "2026-07-26", "announcementId": "A-200017" },
+    { "court": "B000280", "caseNumber": "2025타경200018", "itemNo": 1, "usage": "오피스텔", "addressRaw": "인천광역시 서구 금곡동", "appraisedPrice": 160000000, "minSalePrice": 160000000, "failedCount": 0, "status": "진행중", "nextSaleDate": "2026-07-27", "announcementId": "A-200018" },
+    { "court": "B000280", "caseNumber": "2025타경200019", "itemNo": 1, "usage": "토지", "addressRaw": "인천광역시 서구 오류동", "appraisedPrice": 110000000, "minSalePrice": 88000000, "failedCount": 1, "status": "유찰", "nextSaleDate": "2026-07-28", "announcementId": "A-200019" },
+    { "court": "B000280", "caseNumber": "2025타경200020", "itemNo": 1, "usage": "아파트", "addressRaw": "인천광역시 서구 왕길동", "appraisedPrice": 390000000, "minSalePrice": 390000000, "failedCount": 0, "status": "진행중", "nextSaleDate": "2026-07-29", "announcementId": "A-200020" }
+  ]
+}

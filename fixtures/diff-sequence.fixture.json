@@ -1,0 +1,70 @@
+{
+  "_comment": "신건→유찰→기일변경→취하 상태 전이 시퀀스 (AC-07, REQ-014/015). 가공 데이터 — PII 없음.",
+  "court": "B000280",
+  "records": [
+    {
+      "note": "신건",
+      "court": "B000280",
+      "caseNumber": "2025타경100001",
+      "itemNo": 1,
+      "usage": "아파트",
+      "addressRaw": "인천광역시 서구 청라동",
+      "appraisedPrice": 400000000,
+      "minSalePrice": 320000000,
+      "failedCount": 0,
+      "correctionCount": 0,
+      "cancellationCount": 0,
+      "status": "진행중",
+      "nextSaleDate": "2026-07-28",
+      "announcementId": "ANNC-100001"
+    },
+    {
+      "note": "유찰 (failed_count 1, 최저가 하락) — 물건 상태는 진행중 유지, 일정 결과만 유찰",
+      "court": "B000280",
+      "caseNumber": "2025타경100001",
+      "itemNo": 1,
+      "usage": "아파트",
+      "addressRaw": "인천광역시 서구 청라동",
+      "appraisedPrice": 400000000,
+      "minSalePrice": 256000000,
+      "failedCount": 1,
+      "correctionCount": 0,
+      "cancellationCount": 0,
+      "status": "진행중",
+      "nextSaleDate": "2026-07-28",
+      "announcementId": "ANNC-100001"
+    },
+    {
+      "note": "기일 변경 (sale_date 변경)",
+      "court": "B000280",
+      "caseNumber": "2025타경100001",
+      "itemNo": 1,
+      "usage": "아파트",
+      "addressRaw": "인천광역시 서구 청라동",
+      "appraisedPrice": 400000000,
+      "minSalePrice": 256000000,
+      "failedCount": 1,
+      "correctionCount": 1,
+      "cancellationCount": 0,
+      "status": "변경",
+      "nextSaleDate": "2026-08-25",
+      "announcementId": "ANNC-100001"
+    },
+    {
+      "note": "취하",
+      "court": "B000280",
+      "caseNumber": "2025타경100001",
+      "itemNo": 1,
+      "usage": "아파트",
+      "addressRaw": "인천광역시 서구 청라동",
+      "appraisedPrice": 400000000,
+      "minSalePrice": 256000000,
+      "failedCount": 1,
+      "correctionCount": 1,
+      "cancellationCount": 0,
+      "status": "취하",
+      "nextSaleDate": "2026-08-25",
+      "announcementId": "ANNC-100001"
+    }
+  ]
+}

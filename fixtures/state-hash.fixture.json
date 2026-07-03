@@ -1,0 +1,48 @@
+{
+  "_comment": "state_hash 정준 직렬화 고정 벡터 (AC-08, REQ-013). 가공 데이터 — PII 없음. 직렬화 포맷 변경 시 이 파일이 깨져야 한다.",
+  "serialization": "min_sale_price|failed_count|next_sale_date|correction_count|cancellation_count|status (구분자 '|', null→\"null\")",
+  "vectors": [
+    {
+      "note": "유찰 상태 + 다음 기일 없음(null)",
+      "state": {
+        "itemId": 1,
+        "minSalePrice": 256000000,
+        "failedCount": 1,
+        "nextSaleDate": null,
+        "correctionCount": 0,
+        "cancellationCount": 0,
+        "status": "유찰"
+      },
+      "expectedSerialized": "256000000|1|null|0|0|유찰",
+      "expectedHash": "20fb1fa0997d3229adbfd730c7478a0d2facdbb4"
+    },
+    {
+      "note": "진행중 신건",
+      "state": {
+        "itemId": 2,
+        "minSalePrice": 320000000,
+        "failedCount": 0,
+        "nextSaleDate": "2026-07-28",
+        "correctionCount": 0,
+        "cancellationCount": 0,
+        "status": "진행중"
+      },
+      "expectedSerialized": "320000000|0|2026-07-28|0|0|진행중",
+      "expectedHash": "387929f3eb9f4872979373235d41775130194adc"
+    },
+    {
+      "note": "전 필드 null (극단 케이스)",
+      "state": {
+        "itemId": 3,
+        "minSalePrice": null,
+        "failedCount": 0,
+        "nextSaleDate": null,
+        "correctionCount": 0,
+        "cancellationCount": 0,
+        "status": null
+      },
+      "expectedSerialized": "null|0|null|0|0|null",
+      "expectedHash": "47043feac49a32a49690d5ee664e563cd1efd81d"
+    }
+  ]
+}
