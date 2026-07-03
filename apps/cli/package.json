@@ -1,19 +1,28 @@
 {
-  "name": "@auction-radar/cli",
+  "name": "auction-radar",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
-  "description": "auction-radar CLI (init/sync/watch/case/export/doctor/schedule) — 현재는 빈 스텁",
+  "description": "auction-radar CLI (init/sync/watch/case/export/doctor/schedule)",
   "bin": {
     "auction-radar": "./dist/index.js"
+  },
+  "engines": {
+    "node": ">=20.11"
   },
   "files": ["dist"],
   "scripts": {
     "build": "tsc -b tsconfig.build.json",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@auction-radar/alert": "workspace:*",
     "@auction-radar/core": "workspace:*",
-    "@auction-radar/store": "workspace:*"
+    "@auction-radar/store": "workspace:*",
+    "@inquirer/prompts": "8.5.2",
+    "commander": "15.0.0",
+    "write-excel-file": "4.1.1",
+    "zod": "4.4.3"
   }
 }
