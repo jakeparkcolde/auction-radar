@@ -39,7 +39,14 @@ importers:
         specifier: workspace:*
         version: link:../../packages/store
 
-  packages/alert: {}
+  packages/alert:
+    dependencies:
+      '@auction-radar/core':
+        specifier: workspace:*
+        version: link:../core
+      '@auction-radar/store':
+        specifier: workspace:*
+        version: link:../store
 
   packages/core:
     dependencies:

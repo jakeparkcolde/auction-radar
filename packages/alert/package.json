@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "워치리스트 매칭 + 알림(telegram) + digest + quiet hours (현재는 빈 스텁)",
+  "description": "워치리스트 매칭 + 알림(telegram) + digest + quiet hours + D-day generator (SPEC-ALERT-001)",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -15,6 +15,12 @@
   "files": ["dist"],
   "scripts": {
     "build": "tsc -b tsconfig.build.json",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@auction-radar/core": "workspace:*",
+    "@auction-radar/store": "workspace:*"
   }
 }
