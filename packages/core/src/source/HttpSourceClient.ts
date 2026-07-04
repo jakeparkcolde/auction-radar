@@ -1,10 +1,10 @@
 import {
   CourtAuctionHttpClient,
+  getCaseByCaseNumber,
   getCourtCodes,
   getSaleNoticeDetail,
-  getUsageCodes,
-  searchProperties,
-  type UsageCodeEntry,
+  searchSaleNotices,
+  type CaseScheduleEntry,
 } from 'court-auction-notice-search';
 import { DEFAULT_BASE_URL } from '../endpoints.js';
 import type {
@@ -24,35 +24,36 @@ import type { SourceClient } from './SourceClient.js';
  * ⚠️ CI 에서는 절대 호출하지 않는다(실서버 접근 금지). 컴파일 대상일 뿐이며,
  * 실제 수집은 사용자 로컬에서 자신의 IP 로만 수행한다.
  *
- * ⚠️ 알려진 한계 (라이브 검증 필요 — 후속 SPEC 대상, 2026-07-04 실연동 수정 시 발견):
+ * 사용 엔드포인트 (기획서 §6.2 원래 4종, 브라우저 자동화 없음 — Workflow A/B):
+ * - 매각공고 목록(searchSaleNotices) → 매각공고 상세(getSaleNoticeDetail) → 사건
+ *   단건 조회(getCaseByCaseNumber). "물건 검색"(searchProperties, Workflow C)은
+ *   패키지 README 가 자체 문서화한 "raw-HTTP WAF" 대상이라(HTTP 400 시 자동으로
+ *   playwright-core/rebrowser-playwright 브라우저 자동화로 재시도하도록 설계됨)
+ *   의도적으로 사용하지 않는다 — 기획서 §8 "차단 우회가 아닌 서버 부담 최소화"
+ *   원칙과 충돌하기 때문(2026-07-04 라이브 검증 중 확인, 봇탐지 회피 도구까지
+ *   optionalDependencies 로 준비돼 있음을 근거로 판단).
  *
- * 목록 조회는 "매각공고 목록"(searchSaleNotices, 공고 카드 수준 — 사건번호·유찰횟수 없음)
- * 대신 "물건 검색"(searchProperties, PGJ151F01)을 사용한다. 이 엔드포인트는 사건번호·
- * 유찰횟수·감정가·최저가·주소·용도·지역을 **한 번의 호출로 모두** 제공해, 목록→상세
- * 2단계를 거치지 않고도 워치리스트 매칭에 필요한 데이터가 완비된다.
- *
- * 1. 페이지네이션: budget/throttle 불변식(REQ-001, 002 — guardedCall 당 실제 HTTP 호출
- *    1건)을 지키기 위해 페이지당 최대 100건만 조회하고 추가 페이지는 순회하지 않는다.
- *    한 법원·기간에 100건을 초과하는 활성 매물이 있으면 이번 호출에서 일부가
- *    누락될 수 있다(다음 sync 에서 갱신 시 보완됨). 다건 법원 대응은 후속 과제.
- * 2. 기간 필터: `saleDate.from/to`(입찰기간)를 "당월/익월" 범위로 근사 매핑한다.
- *    원래 "매각공고 목록"의 공고월과 정확히 같은 의미인지는 라이브 호출로만
- *    확인 가능하다.
- * 3. 용도 코드 역조회: 물건 검색은 용도를 코드(대/중/소분류)로만 반환한다.
- *    패키지의 코드표(getUsageCodes)가 자체 문서화한 대로 커버리지가 성글어
- *    (§ usage-codes.json 주석), 매핑 실패 시 코드 원문이 그대로 usage 필드에
- *    들어가고 mapUsage() 가 "기타"로 폴백한다(REQ-019 설계와 일치, 크래시 아님).
- * 4. correctionCount/cancellationCount(정정·취하 횟수)는 물건 검색에 없다 —
- *    항상 0으로 수집되어(defaults), 오직 이 두 값의 증가로만 발생하는 `changed`
- *    이벤트는 라이브 데이터에서 당분간 발생하지 않는다. status 변경·유찰·
- *    최저가 하락은 정상 동작한다.
- * 5. 상세 조회(getSaleNoticeDetail)는 유지하되, 물건 검색으로 얻은 레코드는
- *    이미 데이터가 완비돼 announcementId 를 설정하지 않는다 — orchestration 이
- *    상세 펼치기를 자동으로 건너뛴다(불필요한 호출 절약).
- * 6. `searchProperties`는 HTTP 400(WAF 추정) 시 기본값으로 자체 playwright-core
- *    브라우저를 띄워 재시도한다 — auction-radar 는 브라우저 폴백을 아직
- *    배선하지 않았으므로(REQ-008, `loadPlaywrightTransport` 는 미구현 stub)
- *    반드시 `fallback: false` 로 호출해 원본 업스트림 오류가 가려지지 않게 한다.
+ * ⚠️ 알려진 한계 (라이브 검증 필요):
+ * 1. 매각공고 "목록" 응답에는 사건번호가 없다(공고 카드 수준) — orchestration 이
+ *    이 경우 무조건 상세 펼치기를 수행하도록 처리한다(사건 식별을 상세에서 확보).
+ * 2. 유찰 횟수(failedCount)는 목록·상세 어디에도 없다. 사건 단건 조회의 매각기일
+ *    이력(schedule)에서 **최저매각가가 이전 회차보다 하락한 횟수**를 세어 유찰
+ *    횟수로 근사한다(한국 법원경매 관행상 유찰마다 최저가가 일정 비율 하락 —
+ *    기획서의 price_drop 이벤트 정의와 동일한 논리). resultCode 필드의 정확한
+ *    코드표는 확보하지 못해 직접 사용하지 않는다.
+ * 3. 사건 진행상태(progressStatusCode 등)는 원문 코드를 그대로 통과시킨다 —
+ *    의미(진행중/취하/정지)를 알 수 없어 eventGenerator 의 "취하/정지" 키워드
+ *    매칭(한글 문자열 포함 여부)에는 걸리지 않을 수 있다. 코드값이 실제로
+ *    한글 텍스트인지, 숫자 코드인지는 라이브 호출로만 확인 가능 — 확인 전까지
+ *    `cancelled` 이벤트는 라이브 데이터에서 발생하지 않을 수 있다(백로그).
+ * 4. 상세 응답은 한 공고에 물건이 여러 건일 수 있으나, 현재
+ *    DetailRequest → SourceRecord(단수) 계약상 첫 번째 물건만 취한다.
+ * 5. 신규/변경 의심 건마다 상세(getSaleNoticeDetail) + 사건조회
+ *    (getCaseByCaseNumber) 2번의 실제 HTTP 요청이 발생하지만, 우리 자신의
+ *    BudgetGuard/Throttler 는 이를 1회 guardedCall(= fetchAnnouncementDetail)로만
+ *    계산한다. 실제 네트워크 페이싱은 두 호출이 같은 CourtAuctionHttpClient
+ *    인스턴스를 공유해 그 자체의 minDelayMs(기본 2000ms)가 내부적으로 강제되므로
+ *    안전하지만, budget 카운트는 실제 호출 수보다 적게 잡힌다(문서화된 근사).
  */
 
 /** 브라우저 폴백 transport seam (playwright-core 로 구현). */
@@ -72,16 +73,20 @@ export interface HttpSourceClientOptions {
  *
  * 정적 해석을 피하기 위해 specifier 를 문자열로 캐스팅한다
  * (playwright-core 미설치 환경에서도 타입/빌드가 깨지지 않도록).
+ *
+ * ⚠️ 의도적으로 미구현이다 — "물건 검색"(searchProperties) 같은 raw-HTTP WAF
+ * 보호 엔드포인트를 브라우저 자동화로 우회하는 용도로 쓰지 않기 위함
+ * (기획서 §8 "차단 우회가 아닌 서버 부담 최소화" 원칙, 클래스 상단 주석 참고).
+ * 이 seam 은 REQ-008 이 "Optional" 로 남겨둔 대로 유지하되, 실제 배선은
+ * 별도 SPEC 에서 사용자의 명시적 동의(opt-in) 하에 재검토한다.
  */
 export async function loadPlaywrightTransport(): Promise<BrowserTransport> {
-  // court-auction-notice-search / 사용자 환경에 playwright-core 가 있을 때만 동작한다.
   const specifier = 'playwright-core';
   const mod = (await import(specifier as string)) as unknown;
   if (mod === undefined || mod === null) {
     throw new Error('playwright-core 를 로드할 수 없습니다 (optionalDependency 미설치).');
   }
-  // 실제 브라우저 구동 배선은 M1 로컬 구현 범위. seam 만 제공한다.
-  throw new Error('BrowserTransport 는 아직 구현되지 않았습니다 (M1 로컬 전용).');
+  throw new Error('BrowserTransport 는 아직 구현되지 않았습니다(의도적 미배선 — 상단 주석 참고).');
 }
 
 /** 패키지가 에러 객체에 붙이는 code 필드를 안전하게 추출한다. */
@@ -146,49 +151,37 @@ export function decodeDetailToken(announcementId: string): DetailToken | null {
   }
 }
 
-/** YYYYMM 을 해당 월의 첫날/마지막날(YYYY-MM-DD)로 변환한다. */
-export function monthRange(yearMonth: string): { from: string; to: string } {
-  const y = Number(yearMonth.slice(0, 4));
-  const m = Number(yearMonth.slice(4, 6));
-  const from = `${yearMonth.slice(0, 4)}-${yearMonth.slice(4, 6)}-01`;
-  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
-  const to = `${yearMonth.slice(0, 4)}-${yearMonth.slice(4, 6)}-${String(lastDay).padStart(2, '0')}`;
-  return { from, to };
-}
-
 /**
- * 용도 코드(소/중/대분류 순)를 한글 이름으로 역조회한다. 매칭 실패 시 원본 코드를
- * 그대로 반환한다(mapUsage 가 "기타"로 폴백 — REQ-019 설계와 일치, 크래시 아님).
- * getUsageCodes()는 정적 코드표 조회로 네트워크 호출이 없다.
- */
-export function describeUsageCode(codes: {
-  large: string | null;
-  medium: string | null;
-  small: string | null;
-}): string | null {
-  const candidates = [codes.small, codes.medium, codes.large].filter((c): c is string => c !== null && c !== '');
-  if (candidates.length === 0) return null;
-  const table: UsageCodeEntry[] = getUsageCodes().items;
-  for (const code of candidates) {
-    const found = table.find((entry) => entry.code === code);
-    if (found !== undefined) return found.name;
-  }
-  return candidates[0] ?? null;
-}
-
-/**
- * 법원코드 → 시도(sido) 이름 힌트(추정, docs/court-codes.md 와 동일 범위).
+ * 매각기일 이력에서 유찰 횟수를 근사 계산한다.
  *
- * WebSquare "물건 검색" 폼은 실제 브라우저 사용 시 시/도 선택 → 법원 드롭다운이
- * 그 지역으로 좁혀지는 구조라, 법원코드만 있고 지역이 없으면 서버가 조합 자체를
- * 거부(HTTP 400)할 가능성이 있다(라이브 검증 중 발견, 미확정 가설).
- * 알려진 법원에 한해 지역 힌트를 함께 보내 이 가설을 검증한다.
- * good-first-issue: 법원코드 전체 목록에 대응하는 시도 매핑 확장.
+ * 한국 법원경매는 유찰될 때마다 최저매각가가 일정 비율(보통 20~30%) 하락하는
+ * 관행이 있다 — 기획서의 `price_drop` 이벤트("min_sale_price 감소")와 동일한
+ * 논리를 재사용한다. resultCode 의 정확한 의미(코드표 미확보)에 의존하지 않는
+ * 자기완결적 계산이라, 라이브 검증 없이도 안전하게 쓸 수 있다.
+ *
+ * itemNo 가 주어지면 해당 물건 회차만 필터링하고, 이력에 물건 구분이 없으면
+ * (단일 물건 사건이 흔함) 전체를 하나의 이력으로 취급한다.
  */
-const COURT_SIDO_HINTS: Readonly<Record<string, string>> = {
-  B000210: '서울특별시',
-  B000280: '인천광역시',
-};
+export function computeFailedCountFromSchedule(
+  entries: readonly CaseScheduleEntry[],
+  itemSeq: string | null,
+): number {
+  const relevant = entries.filter((e) => e.itemSeq === null || itemSeq === null || e.itemSeq === itemSeq);
+  const sorted = relevant
+    .filter(
+      (e): e is CaseScheduleEntry & { saleDate: string; minimumSalePrice: number } =>
+        e.saleDate !== null && e.minimumSalePrice !== null,
+    )
+    .slice()
+    .sort((a, b) => (a.saleDate < b.saleDate ? -1 : a.saleDate > b.saleDate ? 1 : 0));
+  let count = 0;
+  let previousPrice: number | undefined;
+  for (const entry of sorted) {
+    if (previousPrice !== undefined && entry.minimumSalePrice < previousPrice) count += 1;
+    previousPrice = entry.minimumSalePrice;
+  }
+  return count;
+}
 
 export class HttpSourceClient implements SourceClient {
   private readonly client: CourtAuctionHttpClient;
@@ -244,39 +237,27 @@ export class HttpSourceClient implements SourceClient {
 
   async fetchAnnouncementList(req: ListRequest): Promise<SourceResponse<SourceRecord[]>> {
     try {
-      const { from, to } = monthRange(req.yearMonth);
-      // 물건 검색(searchProperties)은 사건번호·유찰횟수를 목록 단계에서 바로 제공한다
-      // (searchSaleNotices 는 공고 카드 수준이라 이 두 값이 없다 — 클래스 상단 주석 참고).
-      // 페이지당 100건, 페이지네이션 없음(budget 불변식 유지 — 위 주석 1번).
-      const sidoHint = COURT_SIDO_HINTS[req.court];
-      const result = await searchProperties({
-        courtCode: req.court,
-        ...(sidoHint !== undefined ? { region: { sido: sidoHint } } : {}),
-        saleDate: { from, to },
-        page: 1,
-        pageSize: 100,
-        client: this.client,
-        // 패키지 기본값은 true(HTTP 400 시 자체적으로 playwright-core 브라우저를
-        // 띄워 재시도) — 우리는 브라우저 폴백을 아직 배선하지 않았으므로(REQ-008)
-        // 반드시 false 로 호출해 원본 업스트림 오류가 가려지지 않게 한다.
-        fallback: false,
+      // searchSaleNotices 는 req.yearMonth(YYYYMM)를 그대로 받는다(월 단위 조회).
+      const result = await searchSaleNotices({ date: req.yearMonth, courtCode: req.court, client: this.client });
+      const records: SourceRecord[] = result.items.map((item) => {
+        const jdbnCd = item.judgeDeptCode;
+        const saleDateCompact = item.saleDate !== null ? item.saleDate.replace(/-/g, '') : null;
+        // 목록 단계엔 사건번호가 없다 — jdbnCd+saleDate 토큰으로 상세를 무조건
+        // 펼쳐 식별을 확보한다(orchestration 의 "식별 정보 없음" 경로, REQ-006).
+        const announcementId =
+          jdbnCd !== null && saleDateCompact !== null
+            ? encodeDetailToken({ jdbnCd, saleDate: saleDateCompact })
+            : undefined;
+
+        return {
+          court: item.courtCode ?? req.court,
+          correctionCount: item.correctionCount,
+          cancellationCount: item.cancellationCount,
+          nextSaleDate: item.saleDate,
+          salePlace: item.salePlace,
+          ...(announcementId !== undefined ? { announcementId } : {}),
+        };
       });
-      const records: SourceRecord[] = result.items.map((item) => ({
-        court: item.courtCode ?? req.court,
-        caseNumber: item.caseNumber ?? undefined,
-        itemNo: typeof item.itemNumber === 'string' && /^\d+$/.test(item.itemNumber) ? Number(item.itemNumber) : 1,
-        usage: describeUsageCode(item.usageCodes),
-        addressRaw: item.address,
-        appraisedPrice: item.appraisedPrice,
-        minSalePrice: item.minimumSalePrice,
-        // 유찰 횟수 — searchProperties 만이 제공하는 핵심 필드(REQ-019 연계 워치리스트 조건).
-        failedCount: item.failedBidCount,
-        status: item.statusCode ?? item.progressStatusCode,
-        nextSaleDate: item.saleDate,
-        salePlace: item.salePlace,
-        remarks: item.remarks,
-        // correctionCount/cancellationCount 는 이 엔드포인트에 없음 — 미설정(0 기본값).
-      }));
       return this.wrapOk('listAnnouncement', req, records, result);
     } catch (err) {
       if (errorCode(err) === 'BLOCKED') return this.wrapBlocked('listAnnouncement', req, err);
@@ -297,20 +278,43 @@ export class HttpSourceClient implements SourceClient {
         { client: this.client },
       );
       const first = result.items[0];
-      const record: SourceRecord = first
-        ? {
-            court: req.court,
-            caseNumber: first.caseNumber ?? undefined,
-            itemNo: typeof first.itemSeq === 'string' && /^\d+$/.test(first.itemSeq) ? Number(first.itemSeq) : 1,
-            usage: first.usage,
-            addressRaw: first.address,
-            appraisedPrice: first.appraisedPrice,
-            minSalePrice: first.minimumSalePrice,
-            remarks: first.remarks,
-            salePlace: result.notice.salePlace,
-            nextSaleDate: result.notice.saleDate,
-          }
-        : {};
+      if (first === undefined || first.caseNumber === null) {
+        return this.wrapOk('detailAnnouncement', req, {} as SourceRecord, result);
+      }
+
+      // 사건 단건 조회 — 유찰 횟수(스케줄 최저가 하락 횟수) + 진행상태(원문 코드).
+      // 실패해도 상세 데이터 자체는 유효하므로 sync 전체를 막지 않는다(failedCount=0 폴백).
+      let failedCount = 0;
+      let status: string | null = null;
+      try {
+        const caseRes = await getCaseByCaseNumber({
+          courtCode: req.court,
+          caseNumber: first.caseNumber,
+          client: this.client,
+        });
+        if (caseRes.found) {
+          failedCount = computeFailedCountFromSchedule(caseRes.schedule, first.itemSeq);
+          status = caseRes.caseInfo?.progressStatusCode ?? null;
+        }
+      } catch (caseErr) {
+        if (errorCode(caseErr) === 'BLOCKED') throw caseErr; // 차단은 상위로 전파해 즉시 중단(REQ-003)
+        // 그 외(사건조회 실패)는 무시 — 상세 데이터만으로도 물건 등록은 유효.
+      }
+
+      const record: SourceRecord = {
+        court: req.court,
+        caseNumber: first.caseNumber,
+        itemNo: typeof first.itemSeq === 'string' && /^\d+$/.test(first.itemSeq) ? Number(first.itemSeq) : 1,
+        usage: first.usage,
+        addressRaw: first.address,
+        appraisedPrice: first.appraisedPrice,
+        minSalePrice: first.minimumSalePrice,
+        remarks: first.remarks,
+        salePlace: result.notice.salePlace,
+        nextSaleDate: result.notice.saleDate,
+        failedCount,
+        status,
+      };
       return this.wrapOk('detailAnnouncement', req, record, result);
     } catch (err) {
       if (errorCode(err) === 'BLOCKED') return this.wrapBlocked('detailAnnouncement', req, err);

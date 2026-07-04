@@ -178,6 +178,26 @@ export async function runSync(deps: SyncDeps): Promise<SyncResult> {
     return res;
   }
 
+  /**
+   * 상세 펼치기 + 병합 + 재파싱. 실패 시 raw(parse_ok=0) 저장 + 경고 후 null.
+   * (REQ-004, 006) — "신규/변경 의심" 판단으로 호출되는 경우와, 목록 단계에서
+   * 아예 사건 식별 정보가 없어 무조건 펼쳐야 하는 경우(searchSaleNotices 처럼
+   * 공고 카드 수준 목록) 양쪽에서 공용으로 쓴다.
+   */
+  async function expandDetail(court: CourtCode, rec: SourceRecord): Promise<ParsedRecord | null> {
+    if (rec.announcementId === undefined) return null;
+    const detailRes = await guardedCall(() =>
+      source.fetchAnnouncementDetail({ court, announcementId: rec.announcementId as string }),
+    );
+    const merged = parseRecord(mergeRecord(rec, detailRes.data));
+    if (!merged.ok || merged.parsed === undefined) {
+      saveRaw(store, { endpoint: 'detailAnnouncement', request: { court }, response: detailRes.data }, 0, nowIso());
+      warnings += 1;
+      return null;
+    }
+    return merged.parsed;
+  }
+
   try {
     // 1) warmup
     await guardedCall(() => source.warmup());
@@ -195,7 +215,11 @@ export async function runSync(deps: SyncDeps): Promise<SyncResult> {
     const months = deps.months ?? currentAndNextMonth();
 
     // 3) 법원별 당월+익월 목록 조회 (모든 목록을 먼저 조회한 뒤 상세를 펼친다)
-    const pending: { court: CourtCode; rec: SourceRecord; parsed: ParsedRecord }[] = [];
+    // parsed 가 undefined 인 항목은 "목록 단계에 사건 식별 정보 자체가 없음"을 뜻한다
+    // (예: 매각공고 목록/searchSaleNotices — 공고 카드 수준이라 사건번호 없음).
+    // 이 경우 파싱 실패로 skip 하지 않고, 상세 펼치기(announcementId)로 식별을
+    // 확보할 기회를 준다 — 없으면(announcementId 도 없음) 그때 진짜로 skip 한다.
+    const pending: { court: CourtCode; rec: SourceRecord; parsed: ParsedRecord | undefined }[] = [];
     for (const court of courts) {
       for (const ym of months) {
         const listRes = await guardedCall(() => source.fetchAnnouncementList({ court, yearMonth: ym }));
@@ -204,7 +228,12 @@ export async function runSync(deps: SyncDeps): Promise<SyncResult> {
         for (const rec of records) {
           const outcome = parseRecord(rec);
           if (!outcome.ok || outcome.parsed === undefined) {
-            // 파싱 실패 → skip + raw(parse_ok=0) + 경고 (REQ-016)
+            if (rec.announcementId !== undefined) {
+              // 식별 정보는 없지만 상세로 복구 가능 — 무조건 펼치기 대상으로 대기.
+              pending.push({ court, rec, parsed: undefined });
+              continue;
+            }
+            // 복구 불가 → skip + raw(parse_ok=0) + 경고 (REQ-016)
             saveRaw(store, { endpoint: 'listAnnouncement', request: { court, ym }, response: rec }, 0, nowIso());
             warnings += 1;
             logger.warn(`레코드 파싱 실패: ${outcome.warning ?? 'unknown'}`);
@@ -219,21 +248,18 @@ export async function runSync(deps: SyncDeps): Promise<SyncResult> {
       }
     }
 
-    // 4) 신규/변경 의심만 상세 펼치기 → upsert/diff/이벤트 (REQ-004, 006)
+    // 4) 신규/변경 의심만(또는 식별 정보 자체가 없던 항목은 무조건) 상세 펼치기
+    //    → upsert/diff/이벤트 (REQ-004, 006)
     for (const { court, rec, parsed } of pending) {
-      let effectiveParsed = parsed;
-      if (shouldExpandDetail(store, parsed) && rec.announcementId !== undefined) {
-        const detailRes = await guardedCall(() =>
-          source.fetchAnnouncementDetail({ court, announcementId: rec.announcementId as string }),
-        );
-        const merged = parseRecord(mergeRecord(rec, detailRes.data));
-        if (!merged.ok || merged.parsed === undefined) {
-          saveRaw(store, { endpoint: 'detailAnnouncement', request: { court }, response: detailRes.data }, 0, nowIso());
-          warnings += 1;
-          continue;
-        }
-        effectiveParsed = merged.parsed;
+      let effectiveParsed: ParsedRecord | null;
+      if (parsed === undefined) {
+        effectiveParsed = await expandDetail(court, rec);
+      } else if (shouldExpandDetail(store, parsed) && rec.announcementId !== undefined) {
+        effectiveParsed = await expandDetail(court, rec);
+      } else {
+        effectiveParsed = parsed;
       }
+      if (effectiveParsed === null) continue;
       const result = ingestParsed(store, effectiveParsed, nowIso());
       itemsUpserted += 1;
       eventsCreated += result.eventsCreated;
