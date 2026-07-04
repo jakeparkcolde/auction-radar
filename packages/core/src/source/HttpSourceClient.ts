@@ -93,6 +93,30 @@ export function errorCode(err: unknown): string | undefined {
   return undefined;
 }
 
+/** 패키지가 에러 객체에 붙이는 statusCode 필드를 안전하게 추출한다. */
+export function errorStatusCode(err: unknown): number | undefined {
+  if (err !== null && typeof err === 'object' && 'statusCode' in err) {
+    const c = (err as { statusCode?: unknown }).statusCode;
+    return typeof c === 'number' ? c : undefined;
+  }
+  return undefined;
+}
+
+/**
+ * BLOCKED 가 아닌 에러를 code/statusCode 를 메시지에 포함시켜 다시 던진다.
+ * sync_runs.error 와 콘솔 로그에 statusCode 가 그대로 드러나게 하기 위함
+ * (라이브 진단 시 "그냥 실패했다" 보다 훨씬 유용한 신호).
+ */
+function rethrowWithDiagnostics(err: unknown): never {
+  const code = errorCode(err);
+  const status = errorStatusCode(err);
+  if (err instanceof Error && (code !== undefined || status !== undefined)) {
+    const suffix = [code, status !== undefined ? `HTTP ${status}` : undefined].filter(Boolean).join(', ');
+    err.message = suffix ? `${err.message} [${suffix}]` : err.message;
+  }
+  throw err;
+}
+
 /** 상세 조회에 필요한 최소 토큰(암호화된 jdbnCd + saleDate). */
 export interface DetailToken {
   readonly jdbnCd: string;
@@ -152,6 +176,20 @@ export function describeUsageCode(codes: {
   return candidates[0] ?? null;
 }
 
+/**
+ * 법원코드 → 시도(sido) 이름 힌트(추정, docs/court-codes.md 와 동일 범위).
+ *
+ * WebSquare "물건 검색" 폼은 실제 브라우저 사용 시 시/도 선택 → 법원 드롭다운이
+ * 그 지역으로 좁혀지는 구조라, 법원코드만 있고 지역이 없으면 서버가 조합 자체를
+ * 거부(HTTP 400)할 가능성이 있다(라이브 검증 중 발견, 미확정 가설).
+ * 알려진 법원에 한해 지역 힌트를 함께 보내 이 가설을 검증한다.
+ * good-first-issue: 법원코드 전체 목록에 대응하는 시도 매핑 확장.
+ */
+const COURT_SIDO_HINTS: Readonly<Record<string, string>> = {
+  B000210: '서울특별시',
+  B000280: '인천광역시',
+};
+
 export class HttpSourceClient implements SourceClient {
   private readonly client: CourtAuctionHttpClient;
 
@@ -189,7 +227,7 @@ export class HttpSourceClient implements SourceClient {
       return this.wrapOk('warmup', {}, { session: 'live' }, { session: 'live' });
     } catch (err) {
       if (errorCode(err) === 'BLOCKED') return this.wrapBlocked('warmup', {}, err);
-      throw err;
+      rethrowWithDiagnostics(err);
     }
   }
 
@@ -200,7 +238,7 @@ export class HttpSourceClient implements SourceClient {
       return this.wrapOk('courtCodeList', {}, codes, result);
     } catch (err) {
       if (errorCode(err) === 'BLOCKED') return this.wrapBlocked('courtCodeList', {}, err);
-      throw err;
+      rethrowWithDiagnostics(err);
     }
   }
 
@@ -210,8 +248,10 @@ export class HttpSourceClient implements SourceClient {
       // 물건 검색(searchProperties)은 사건번호·유찰횟수를 목록 단계에서 바로 제공한다
       // (searchSaleNotices 는 공고 카드 수준이라 이 두 값이 없다 — 클래스 상단 주석 참고).
       // 페이지당 100건, 페이지네이션 없음(budget 불변식 유지 — 위 주석 1번).
+      const sidoHint = COURT_SIDO_HINTS[req.court];
       const result = await searchProperties({
         courtCode: req.court,
+        ...(sidoHint !== undefined ? { region: { sido: sidoHint } } : {}),
         saleDate: { from, to },
         page: 1,
         pageSize: 100,
@@ -240,7 +280,7 @@ export class HttpSourceClient implements SourceClient {
       return this.wrapOk('listAnnouncement', req, records, result);
     } catch (err) {
       if (errorCode(err) === 'BLOCKED') return this.wrapBlocked('listAnnouncement', req, err);
-      throw err;
+      rethrowWithDiagnostics(err);
     }
   }
 
@@ -274,7 +314,7 @@ export class HttpSourceClient implements SourceClient {
       return this.wrapOk('detailAnnouncement', req, record, result);
     } catch (err) {
       if (errorCode(err) === 'BLOCKED') return this.wrapBlocked('detailAnnouncement', req, err);
-      throw err;
+      rethrowWithDiagnostics(err);
     }
   }
 }
