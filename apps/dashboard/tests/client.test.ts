@@ -132,4 +132,25 @@ describe('renderView (REQ-004/005/006/008, AC-01/02/08/09)', () => {
       '?watchlist=1&type=price_drop&period=90',
     );
   });
+
+  it('사건번호 복사 버튼 클릭 시 클립보드에 사건번호를 복사한다 (원문 딥링크 부재 보완)', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    });
+
+    const root = document.createElement('div');
+    const item = itemView({ caseNumber: '2025타경511289' });
+    renderView(root, baseVm({ items: [item] }), defaultFilters(), () => {});
+
+    const btn = root.querySelector('.copy-btn') as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    btn.click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(writeText).toHaveBeenCalledWith('2025타경511289');
+    expect(btn.textContent).toBe('복사됨');
+  });
 });

@@ -59,12 +59,67 @@ function ddayText(dday: number | null): string {
   return `지남 ${Math.abs(dday)}일`;
 }
 
+/**
+ * 텍스트를 클립보드에 복사한다.
+ *
+ * 법원경매정보 사이트는 안정적인 딥링크가 없어(courtAuctionUrl 주석 참고)
+ * "원문 보기"는 포털 랜딩 페이지로만 이동한다 — 사건번호를 사이트 안의
+ * 사건검색에 붙여넣을 수 있도록 복사를 돕는다.
+ */
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // 아래 폴백으로 진행
+  }
+  try {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+/** 사건번호 + 복사 버튼을 함께 렌더한다. */
+function renderCaseNumber(caseNumber: string): HTMLElement {
+  const wrap = el('span', { className: 'case-wrap' });
+  wrap.appendChild(el('span', { className: 'case', text: caseNumber }));
+
+  const btn = el('button', { className: 'copy-btn', text: '복사' });
+  btn.setAttribute('type', 'button');
+  btn.setAttribute('title', '사건번호 복사');
+  btn.setAttribute('aria-label', '사건번호 복사');
+  btn.addEventListener('click', () => {
+    void copyToClipboard(caseNumber).then((ok) => {
+      const original = '복사';
+      btn.textContent = ok ? '복사됨' : '복사 실패';
+      btn.classList.toggle('copied', ok);
+      setTimeout(() => {
+        btn.textContent = original;
+        btn.classList.remove('copied');
+      }, 1500);
+    });
+  });
+  wrap.appendChild(btn);
+  return wrap;
+}
+
 /** 물건 카드 하나를 렌더한다. */
 function renderItem(item: ItemView): HTMLElement {
   const card = el('article', { className: 'item' });
 
   const head = el('div', { className: 'item-head' });
-  head.appendChild(el('span', { className: 'case', text: item.caseNumber }));
+  head.appendChild(renderCaseNumber(item.caseNumber));
   head.appendChild(el('span', { className: 'court', text: item.courtCode }));
   if (item.dday !== null) {
     head.appendChild(el('span', { className: 'dday', text: ddayText(item.dday) }));

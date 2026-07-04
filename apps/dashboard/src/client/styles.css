@@ -112,8 +112,34 @@ section h2 {
   flex-wrap: wrap;
 }
 
+.item-head .case-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .item-head .case {
   font-weight: 600;
+}
+
+.copy-btn {
+  background: var(--panel-2);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.copy-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.copy-btn.copied {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 .item-head .court {
