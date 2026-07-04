@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { runMigrations, SqliteStore } from '@auction-radar/store';
 import { describe, expect, it } from 'vitest';
-import { ingestParsed, insertEvents, parseRecord } from '../src/sync/ingest.js';
+import { ingestParsed, insertEvents, isMovableProperty, parseRecord } from '../src/sync/ingest.js';
 import type { ItemState, SourceRecord } from '../src/types.js';
 
 const NOW = '2026-07-03T00:00:00Z';
@@ -116,6 +116,39 @@ describe('parseRecord — 파싱 실패 처리 (AC-06, REQ-016)', () => {
     expect(res.ok).toBe(true);
     expect(res.parsed?.regionNorm).toBe('인천 서구');
     expect(res.parsed?.usageCategory).toBe('아파트');
+  });
+});
+
+describe('동산(자동차·선박 등) 경매 제외 — 기획서 §4.4 비지원', () => {
+  it.each(['자동차', '자동차 중기', '선박', '건설기계', '항공기'])(
+    'usage="%s" 는 동산으로 판정된다',
+    (usage) => {
+      expect(isMovableProperty(usage)).toBe(true);
+    },
+  );
+
+  it.each(['아파트', '단독주택', '다세대', '전답', '지식산업센터', null])(
+    'usage="%s" 는 동산이 아니다',
+    (usage) => {
+      expect(isMovableProperty(usage)).toBe(false);
+    },
+  );
+
+  it('동산 레코드는 parseRecord 에서 skip 되고(ok=false) 사유가 명시된다', () => {
+    const res = parseRecord({ ...baseRecord, usage: '자동차' });
+    expect(res.ok).toBe(false);
+    expect(res.warning).toContain('동산');
+  });
+
+  it('"자동차 중기"처럼 부분 일치도 걸러진다', () => {
+    const res = parseRecord({ ...baseRecord, usage: '자동차 중기' });
+    expect(res.ok).toBe(false);
+  });
+
+  it('건물명에 우연히 겹치는 단어(예: 자동차보관소가 아닌 실제 부동산 usage)는 정상 통과한다', () => {
+    // usage 자체가 실제 부동산 카테고리면(주소/비고에 다른 단어가 섞여도) 정상 처리.
+    const res = parseRecord({ ...baseRecord, usage: '아파트', remarks: '인근 자동차보관소 있음' });
+    expect(res.ok).toBe(true);
   });
 });
 

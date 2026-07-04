@@ -55,6 +55,21 @@ function coerceCount(value: unknown, fieldName: string): number {
 }
 
 /**
+ * 동산(자동차·선박·중기 등) 경매 판정 키워드.
+ *
+ * 기획서 §4.4 "명시적 비지원" — 동산 경매, 공매(온비드) 등은 이 프로젝트의
+ * 범위 밖이다. 법원경매 목록/상세 API 는 법원 단위로 부동산·동산을 함께
+ * 반환하므로(자체 필터 파라미터 없음), 여기서 usage 원문 기준으로 걸러낸다.
+ */
+const MOVABLE_PROPERTY_KEYWORDS = ['자동차', '선박', '중기', '건설기계', '항공기'] as const;
+
+/** usage 원문이 동산 경매를 가리키는지 판정한다(부동산만 지원). */
+export function isMovableProperty(usage: string | null): boolean {
+  if (usage === null) return false;
+  return MOVABLE_PROPERTY_KEYWORDS.some((kw) => usage.includes(kw));
+}
+
+/**
  * SourceRecord 를 파싱·정규화한다. 필수 필드 누락·형변환 실패 시 ok=false.
  * (REQ-016)
  */
@@ -67,6 +82,11 @@ export function parseRecord(rec: SourceRecord): ParseOutcome {
     if (!caseNumber) throw new TypeError('필수 필드 "caseNumber" 누락');
 
     const usage = rec.usage ?? null;
+    if (isMovableProperty(usage)) {
+      // 동산(자동차/선박/중기 등) 경매 — 기획서 §4.4 비지원 대상. 파싱 실패와
+      // 동일한 경로(skip + raw_snapshots + 경고)로 처리해 sync 는 계속 진행한다.
+      throw new TypeError(`동산 경매(usage="${usage}")는 미지원 대상입니다 (기획서 §4.4)`);
+    }
     const usageMapping = mapUsage(usage);
     const addressRaw = rec.addressRaw ?? null;
 
