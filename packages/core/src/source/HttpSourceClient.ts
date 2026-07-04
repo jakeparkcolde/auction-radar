@@ -49,6 +49,10 @@ import type { SourceClient } from './SourceClient.js';
  * 5. 상세 조회(getSaleNoticeDetail)는 유지하되, 물건 검색으로 얻은 레코드는
  *    이미 데이터가 완비돼 announcementId 를 설정하지 않는다 — orchestration 이
  *    상세 펼치기를 자동으로 건너뛴다(불필요한 호출 절약).
+ * 6. `searchProperties`는 HTTP 400(WAF 추정) 시 기본값으로 자체 playwright-core
+ *    브라우저를 띄워 재시도한다 — auction-radar 는 브라우저 폴백을 아직
+ *    배선하지 않았으므로(REQ-008, `loadPlaywrightTransport` 는 미구현 stub)
+ *    반드시 `fallback: false` 로 호출해 원본 업스트림 오류가 가려지지 않게 한다.
  */
 
 /** 브라우저 폴백 transport seam (playwright-core 로 구현). */
@@ -212,6 +216,10 @@ export class HttpSourceClient implements SourceClient {
         page: 1,
         pageSize: 100,
         client: this.client,
+        // 패키지 기본값은 true(HTTP 400 시 자체적으로 playwright-core 브라우저를
+        // 띄워 재시도) — 우리는 브라우저 폴백을 아직 배선하지 않았으므로(REQ-008)
+        // 반드시 false 로 호출해 원본 업스트림 오류가 가려지지 않게 한다.
+        fallback: false,
       });
       const records: SourceRecord[] = result.items.map((item) => ({
         court: item.courtCode ?? req.court,

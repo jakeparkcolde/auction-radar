@@ -146,6 +146,13 @@ declare module 'court-auction-notice-search' {
     region?: { sido?: string; sigungu?: string; dong?: string };
     usage?: { large?: string; medium?: string; small?: string };
     client?: CourtAuctionHttpClient;
+    /**
+     * 기본값 true — WAF 로 추정되는 HTTP 400 시 패키지가 자체적으로
+     * playwright-core 브라우저를 띄워 재시도한다. auction-radar 는 브라우저
+     * 폴백을 아직 배선하지 않았으므로(REQ-008, HttpSourceClient 상단 주석)
+     * 반드시 false 로 호출해 원본 업스트림 오류가 가려지지 않게 한다.
+     */
+    fallback?: boolean;
   }
 
   /** 물건 검색 (searchControllerMain.on / PGJ151F01). */
