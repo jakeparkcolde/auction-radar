@@ -1,4 +1,11 @@
-import { CourtAuctionHttpClient, getCourtCodes, getSaleNoticeDetail, searchSaleNotices } from 'court-auction-notice-search';
+import {
+  CourtAuctionHttpClient,
+  getCourtCodes,
+  getSaleNoticeDetail,
+  getUsageCodes,
+  searchProperties,
+  type UsageCodeEntry,
+} from 'court-auction-notice-search';
 import { DEFAULT_BASE_URL } from '../endpoints.js';
 import type {
   CourtCode,
@@ -18,18 +25,30 @@ import type { SourceClient } from './SourceClient.js';
  * 실제 수집은 사용자 로컬에서 자신의 IP 로만 수행한다.
  *
  * ⚠️ 알려진 한계 (라이브 검증 필요 — 후속 SPEC 대상, 2026-07-04 실연동 수정 시 발견):
- * 1. 매각공고 "목록"(searchSaleNotices) 응답에는 사건번호(csNo)가 정식 필드로
- *    포함되지 않는다(공고 카드 수준 — 사건/물건은 상세에서만 펼쳐진다, §6.2 설계와 일치).
- *    raw 페이로드에 csNo/saNo 가 실제로 있는지는 라이브 호출로만 확인 가능하므로
- *    방어적으로 조회하되, 없으면 해당 레코드는 caseNumber 없이 반환되어
- *    parseRecord 가 REQ-016 에 따라 안전하게 skip 한다(sync 자체는 중단 안 함).
- * 2. 유찰 횟수(failedCount)는 목록·상세 엔드포인트 어디에도 없다(둘 다 확인함).
- *    실제로는 "사건 단건 조회"(getCaseByCaseNumber)의 schedule 이력에서 유찰
- *    결과를 세거나, "물건 검색"(searchProperties)의 flbdCount 를 써야 한다.
- *    두 경로 모두 아직 배선되지 않아 failedCount 는 항상 0으로 수집되며,
- *    워치리스트의 failedCountMin 조건에 영향을 준다.
- * 3. 상세 응답은 한 공고에 물건이 여러 건일 수 있으나, 현재
- *    DetailRequest → SourceRecord(단수) 계약상 첫 번째 물건만 취한다.
+ *
+ * 목록 조회는 "매각공고 목록"(searchSaleNotices, 공고 카드 수준 — 사건번호·유찰횟수 없음)
+ * 대신 "물건 검색"(searchProperties, PGJ151F01)을 사용한다. 이 엔드포인트는 사건번호·
+ * 유찰횟수·감정가·최저가·주소·용도·지역을 **한 번의 호출로 모두** 제공해, 목록→상세
+ * 2단계를 거치지 않고도 워치리스트 매칭에 필요한 데이터가 완비된다.
+ *
+ * 1. 페이지네이션: budget/throttle 불변식(REQ-001, 002 — guardedCall 당 실제 HTTP 호출
+ *    1건)을 지키기 위해 페이지당 최대 100건만 조회하고 추가 페이지는 순회하지 않는다.
+ *    한 법원·기간에 100건을 초과하는 활성 매물이 있으면 이번 호출에서 일부가
+ *    누락될 수 있다(다음 sync 에서 갱신 시 보완됨). 다건 법원 대응은 후속 과제.
+ * 2. 기간 필터: `saleDate.from/to`(입찰기간)를 "당월/익월" 범위로 근사 매핑한다.
+ *    원래 "매각공고 목록"의 공고월과 정확히 같은 의미인지는 라이브 호출로만
+ *    확인 가능하다.
+ * 3. 용도 코드 역조회: 물건 검색은 용도를 코드(대/중/소분류)로만 반환한다.
+ *    패키지의 코드표(getUsageCodes)가 자체 문서화한 대로 커버리지가 성글어
+ *    (§ usage-codes.json 주석), 매핑 실패 시 코드 원문이 그대로 usage 필드에
+ *    들어가고 mapUsage() 가 "기타"로 폴백한다(REQ-019 설계와 일치, 크래시 아님).
+ * 4. correctionCount/cancellationCount(정정·취하 횟수)는 물건 검색에 없다 —
+ *    항상 0으로 수집되어(defaults), 오직 이 두 값의 증가로만 발생하는 `changed`
+ *    이벤트는 라이브 데이터에서 당분간 발생하지 않는다. status 변경·유찰·
+ *    최저가 하락은 정상 동작한다.
+ * 5. 상세 조회(getSaleNoticeDetail)는 유지하되, 물건 검색으로 얻은 레코드는
+ *    이미 데이터가 완비돼 announcementId 를 설정하지 않는다 — orchestration 이
+ *    상세 펼치기를 자동으로 건너뛴다(불필요한 호출 절약).
  */
 
 /** 브라우저 폴백 transport seam (playwright-core 로 구현). */
@@ -99,6 +118,36 @@ export function decodeDetailToken(announcementId: string): DetailToken | null {
   }
 }
 
+/** YYYYMM 을 해당 월의 첫날/마지막날(YYYY-MM-DD)로 변환한다. */
+export function monthRange(yearMonth: string): { from: string; to: string } {
+  const y = Number(yearMonth.slice(0, 4));
+  const m = Number(yearMonth.slice(4, 6));
+  const from = `${yearMonth.slice(0, 4)}-${yearMonth.slice(4, 6)}-01`;
+  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const to = `${yearMonth.slice(0, 4)}-${yearMonth.slice(4, 6)}-${String(lastDay).padStart(2, '0')}`;
+  return { from, to };
+}
+
+/**
+ * 용도 코드(소/중/대분류 순)를 한글 이름으로 역조회한다. 매칭 실패 시 원본 코드를
+ * 그대로 반환한다(mapUsage 가 "기타"로 폴백 — REQ-019 설계와 일치, 크래시 아님).
+ * getUsageCodes()는 정적 코드표 조회로 네트워크 호출이 없다.
+ */
+export function describeUsageCode(codes: {
+  large: string | null;
+  medium: string | null;
+  small: string | null;
+}): string | null {
+  const candidates = [codes.small, codes.medium, codes.large].filter((c): c is string => c !== null && c !== '');
+  if (candidates.length === 0) return null;
+  const table: UsageCodeEntry[] = getUsageCodes().items;
+  for (const code of candidates) {
+    const found = table.find((entry) => entry.code === code);
+    if (found !== undefined) return found.name;
+  }
+  return candidates[0] ?? null;
+}
+
 export class HttpSourceClient implements SourceClient {
   private readonly client: CourtAuctionHttpClient;
 
@@ -153,30 +202,33 @@ export class HttpSourceClient implements SourceClient {
 
   async fetchAnnouncementList(req: ListRequest): Promise<SourceResponse<SourceRecord[]>> {
     try {
-      const result = await searchSaleNotices({ date: req.yearMonth, courtCode: req.court, client: this.client });
-      const records: SourceRecord[] = result.items.map((item) => {
-        const raw = (item.raw ?? {}) as Record<string, unknown>;
-        // 사건번호는 목록 응답에 정식 포함되지 않는다 — raw 를 방어적으로 조회한다.
-        const caseNumberGuess =
-          (typeof raw.csNo === 'string' && raw.csNo) || (typeof raw.saNo === 'string' && raw.saNo) || undefined;
-
-        const jdbnCd = item.judgeDeptCode ?? (typeof raw.jdbnCd === 'string' ? raw.jdbnCd : null);
-        const saleDateCompact = item.saleDate !== null ? item.saleDate.replace(/-/g, '') : null;
-        const announcementId =
-          jdbnCd !== null && saleDateCompact !== null
-            ? encodeDetailToken({ jdbnCd, saleDate: saleDateCompact })
-            : undefined;
-
-        return {
-          court: item.courtCode ?? req.court,
-          ...(caseNumberGuess !== undefined ? { caseNumber: caseNumberGuess } : {}),
-          correctionCount: item.correctionCount,
-          cancellationCount: item.cancellationCount,
-          nextSaleDate: item.saleDate,
-          salePlace: item.salePlace,
-          ...(announcementId !== undefined ? { announcementId } : {}),
-        };
+      const { from, to } = monthRange(req.yearMonth);
+      // 물건 검색(searchProperties)은 사건번호·유찰횟수를 목록 단계에서 바로 제공한다
+      // (searchSaleNotices 는 공고 카드 수준이라 이 두 값이 없다 — 클래스 상단 주석 참고).
+      // 페이지당 100건, 페이지네이션 없음(budget 불변식 유지 — 위 주석 1번).
+      const result = await searchProperties({
+        courtCode: req.court,
+        saleDate: { from, to },
+        page: 1,
+        pageSize: 100,
+        client: this.client,
       });
+      const records: SourceRecord[] = result.items.map((item) => ({
+        court: item.courtCode ?? req.court,
+        caseNumber: item.caseNumber ?? undefined,
+        itemNo: typeof item.itemNumber === 'string' && /^\d+$/.test(item.itemNumber) ? Number(item.itemNumber) : 1,
+        usage: describeUsageCode(item.usageCodes),
+        addressRaw: item.address,
+        appraisedPrice: item.appraisedPrice,
+        minSalePrice: item.minimumSalePrice,
+        // 유찰 횟수 — searchProperties 만이 제공하는 핵심 필드(REQ-019 연계 워치리스트 조건).
+        failedCount: item.failedBidCount,
+        status: item.statusCode ?? item.progressStatusCode,
+        nextSaleDate: item.saleDate,
+        salePlace: item.salePlace,
+        remarks: item.remarks,
+        // correctionCount/cancellationCount 는 이 엔드포인트에 없음 — 미설정(0 기본값).
+      }));
       return this.wrapOk('listAnnouncement', req, records, result);
     } catch (err) {
       if (errorCode(err) === 'BLOCKED') return this.wrapBlocked('listAnnouncement', req, err);

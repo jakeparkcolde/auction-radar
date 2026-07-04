@@ -111,4 +111,54 @@ declare module 'court-auction-notice-search' {
 
   /** 법원사무소 코드표 조회 (selectCortOfcCdLst). */
   export function getCourtCodes(options?: { client?: CourtAuctionHttpClient }): Promise<CourtCodesResult>;
+
+  /** 물건 검색(PGJ151F01) 결과 행 — 사건번호·유찰횟수·가격·주소를 한 번에 포함한다. */
+  export interface PropertySearchRow {
+    caseNumber: string | null;
+    itemNumber: string | null;
+    address: string | null;
+    appraisedPrice: number | null;
+    minimumSalePrice: number | null;
+    failedBidCount: number;
+    statusCode: string | null;
+    progressStatusCode: string | null;
+    courtCode: string | null;
+    judgeDeptCode: string | null;
+    saleDate: string | null;
+    salePlace: string | null;
+    usageCodes: { large: string | null; medium: string | null; small: string | null };
+    regionCodes: { sido: string | null; sigungu: string | null; dong: string | null };
+    remarks: string | null;
+    raw?: Record<string, unknown>;
+  }
+
+  export interface PropertySearchResult {
+    page: { pageNo: number; pageSize: number; totalCount: number };
+    count: number;
+    items: PropertySearchRow[];
+  }
+
+  export interface PropertySearchParams {
+    courtCode?: string;
+    page?: number;
+    pageSize?: number;
+    saleDate?: { from?: string; to?: string };
+    region?: { sido?: string; sigungu?: string; dong?: string };
+    usage?: { large?: string; medium?: string; small?: string };
+    client?: CourtAuctionHttpClient;
+  }
+
+  /** 물건 검색 (searchControllerMain.on / PGJ151F01). */
+  export function searchProperties(params: PropertySearchParams): Promise<PropertySearchResult>;
+
+  /** 용도 코드표 항목(대/중/소분류). 커버리지가 성글다(패키지 자체 문서화된 한계). */
+  export interface UsageCodeEntry {
+    level: 'large' | 'medium' | 'small';
+    code: string;
+    name: string;
+    parentCode?: string;
+  }
+
+  /** 등록된 용도 코드 전체 목록(코드→이름 역조회용). 네트워크 호출 없음(정적 코드표). */
+  export function getUsageCodes(): { count: number; items: UsageCodeEntry[] };
 }
