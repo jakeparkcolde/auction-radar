@@ -61,6 +61,26 @@ body {
   margin: 12px 0;
 }
 
+.filters-client {
+  padding: 10px 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.filter-search {
+  flex: 1 1 200px;
+}
+
+.filter input[type='search'] {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 8px;
+  width: 100%;
+}
+
 .filter {
   display: flex;
   flex-direction: column;

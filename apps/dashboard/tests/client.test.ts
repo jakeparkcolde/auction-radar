@@ -1,6 +1,14 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from 'vitest';
-import { defaultFilters, renderView, toQuery } from '../src/client/main.js';
+import {
+  applyItemFilter,
+  defaultFilters,
+  defaultItemFilter,
+  regionOptions,
+  renderView,
+  toQuery,
+  usageOptions,
+} from '../src/client/main.js';
 import type { ItemView, ViewModel } from '../src/render/viewModel.js';
 
 /** 물건 뷰 픽스처. */
@@ -16,6 +24,8 @@ function itemView(over: Partial<ItemView> = {}): ItemView {
     addressDetail: '행복아파트',
     appraisedPriceText: '3.2억',
     minSalePriceText: '2.56억',
+    appraisedPrice: 320_000_000,
+    minSalePrice: 256_000_000,
     failedCount: 1,
     saleDate: '2026-07-08',
     dday: 5,
@@ -57,17 +67,20 @@ describe('renderView (REQ-004/005/006/008, AC-01/02/08/09)', () => {
 
   it('AC-02: 높음 enrich 는 굵게(.emph), 낮음 enrich 는 강조 없음', () => {
     const root = document.createElement('div');
+    // dday>7 로 두어 임박 섹션에 핀 고정(중복 렌더)되지 않게 한다.
     const a = itemView({
       id: 100,
+      dday: 30,
       enrich: { discountPct: -32, discountText: '−32%', sampleSize: 14, confidence: '높음', emphasize: true },
     });
     const b = itemView({
       id: 101,
+      dday: 30,
       enrich: { discountPct: -15, discountText: '−15%', sampleSize: 2, confidence: '참고치 (표본 부족)', emphasize: false },
     });
     renderView(root, baseVm({ items: [a, b] }), defaultFilters(), () => {});
 
-    const discounts = root.querySelectorAll('.enrich .discount');
+    const discounts = root.querySelectorAll('.items .enrich .discount');
     expect(discounts.length).toBe(2);
     const [dA, dB] = Array.from(discounts) as HTMLElement[];
     expect(dA.classList.contains('emph')).toBe(true);
@@ -131,6 +144,86 @@ describe('renderView (REQ-004/005/006/008, AC-01/02/08/09)', () => {
     expect(toQuery({ watchlist: '1', type: 'price_drop', period: '90' })).toBe(
       '?watchlist=1&type=price_drop&period=90',
     );
+  });
+
+  it('클라이언트 필터 변경 시 재조회 없이 재렌더한다(onItemFilter 호출)', () => {
+    const root = document.createElement('div');
+    const onItemFilter = vi.fn();
+    const items = [
+      itemView({ id: 1, region: '인천 서구' }),
+      itemView({ id: 2, region: '인천 부평구' }),
+    ];
+    renderView(root, baseVm({ items }), defaultFilters(), () => {}, defaultItemFilter(), onItemFilter);
+    // 지역 select 는 클라이언트 필터 바(.filters-client)의 첫 select.
+    const regionSelect = root.querySelector('.filters-client select') as HTMLSelectElement;
+    expect(regionSelect).not.toBeNull();
+    regionSelect.value = '인천 서구';
+    regionSelect.dispatchEvent(new Event('change'));
+    expect(onItemFilter).toHaveBeenCalledWith(expect.objectContaining({ region: '인천 서구' }));
+  });
+
+  it('필터링 결과가 "물건 (n / 전체 m)" 형태로 개수를 보여준다', () => {
+    const root = document.createElement('div');
+    const items = [
+      itemView({ id: 1, region: '인천 서구' }),
+      itemView({ id: 2, region: '인천 부평구' }),
+    ];
+    renderView(
+      root,
+      baseVm({ items }),
+      defaultFilters(),
+      () => {},
+      { ...defaultItemFilter(), region: '인천 서구' },
+      () => {},
+    );
+    expect(root.querySelector('.items h2')?.textContent).toBe('물건 (1 / 전체 2)');
+  });
+});
+
+describe('applyItemFilter (지역/용도/가격/검색/정렬)', () => {
+  const A = itemView({ id: 1, region: '인천 서구', usageCategory: '아파트', minSalePrice: 300_000_000, failedCount: 0, dday: 10 });
+  const B = itemView({ id: 2, region: '인천 부평구', usageCategory: '빌라', minSalePrice: 100_000_000, failedCount: 2, dday: 3, addressDetail: '중봉대로 490' });
+  const C = itemView({ id: 3, region: '인천 서구', usageCategory: '아파트', minSalePrice: 500_000_000, failedCount: 1, dday: null });
+  const all = [A, B, C];
+
+  it('지역 필터', () => {
+    const r = applyItemFilter(all, { ...defaultItemFilter(), region: '인천 서구' });
+    expect(r.map((x) => x.id).sort()).toEqual([1, 3]);
+  });
+
+  it('용도 필터', () => {
+    const r = applyItemFilter(all, { ...defaultItemFilter(), usage: '빌라' });
+    expect(r.map((x) => x.id)).toEqual([2]);
+  });
+
+  it('가격 상한 필터(최저가 기준)', () => {
+    const r = applyItemFilter(all, { ...defaultItemFilter(), priceMax: 300_000_000 });
+    expect(r.map((x) => x.id).sort()).toEqual([1, 2]);
+  });
+
+  it('주소·사건번호 검색(부분 일치)', () => {
+    const r = applyItemFilter(all, { ...defaultItemFilter(), search: '중봉대로' });
+    expect(r.map((x) => x.id)).toEqual([2]);
+  });
+
+  it('정렬: 기일 임박순(dday 오름차순, null 은 뒤로)', () => {
+    const r = applyItemFilter(all, { ...defaultItemFilter(), sort: 'sale' });
+    expect(r.map((x) => x.id)).toEqual([2, 1, 3]);
+  });
+
+  it('정렬: 최저가 낮은순', () => {
+    const r = applyItemFilter(all, { ...defaultItemFilter(), sort: 'price_asc' });
+    expect(r.map((x) => x.id)).toEqual([2, 1, 3]);
+  });
+
+  it('정렬: 유찰 많은순', () => {
+    const r = applyItemFilter(all, { ...defaultItemFilter(), sort: 'failed' });
+    expect(r.map((x) => x.id)).toEqual([2, 3, 1]);
+  });
+
+  it('regionOptions/usageOptions 는 고유값을 정렬해 반환한다', () => {
+    expect(regionOptions(all)).toEqual(['인천 부평구', '인천 서구']);
+    expect(usageOptions(all)).toEqual(['빌라', '아파트']);
   });
 
   it('사건번호 복사 버튼 클릭 시 클립보드에 사건번호를 복사한다 (원문 딥링크 부재 보완)', async () => {

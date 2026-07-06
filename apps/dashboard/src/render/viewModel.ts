@@ -49,6 +49,10 @@ export interface ItemView {
   readonly appraisedPriceText: string | null;
   /** 최저매각가(억/만 환산). 없으면 null. */
   readonly minSalePriceText: string | null;
+  /** 감정가 원 단위 정수(정렬·필터용). 없으면 null. */
+  readonly appraisedPrice: number | null;
+  /** 최저매각가 원 단위 정수(정렬·필터용). 없으면 null. */
+  readonly minSalePrice: number | null;
   readonly failedCount: number;
   /** 매각기일(YYYY-MM-DD). 없으면 null. */
   readonly saleDate: string | null;
@@ -159,6 +163,8 @@ export function buildItemView(
     addressDetail: row.address_raw,
     appraisedPriceText: row.appraised_price === null ? null : formatKRW(row.appraised_price),
     minSalePriceText: row.min_sale_price === null ? null : formatKRW(row.min_sale_price),
+    appraisedPrice: row.appraised_price,
+    minSalePrice: row.min_sale_price,
     failedCount: row.failed_count,
     saleDate,
     dday: saleDate ? daysUntilKST(saleDate, now) : null,
